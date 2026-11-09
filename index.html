@@ -1373,7 +1373,15 @@
         "use strict";
 
         function mkItem(t, key, alt) {
-          return { t: t, img: "assets/" + key + ".jpg", hd: "assets/hd/" + key + ".webp", alt: alt };
+          /* Gallery thumbnails live under assets/g/ as fresh baseline
+             (non-progressive) JPEG encodes. The earlier files sat at
+             the top level as 10-scan progressive JPEGs, and on the
+             published site exactly this batch failed to load/decode
+             in the browser while the older literal-path images
+             (Worklybd / Softvence / branding) rendered fine — so the
+             whole batch was re-encoded conservatively and moved to
+             fresh URLs that no stale server copy or cache can shadow. */
+          return { t: t, img: "assets/g/" + key + ".jpg", hd: "assets/hd/" + key + ".webp", alt: alt };
         }
         function mkSet(name, desc, members) {
           return { set: true, name: name, desc: desc, members: members };
@@ -1520,6 +1528,24 @@
         var currentSet = null;
         var currentFlat = [];
 
+        /* Self-healing gallery images: if a thumbnail request fails
+           (CDN hiccup, dropped connection on a slow network), retry
+           it once with a cache-busting query instead of leaving a
+           broken-image card with only its alt text showing. The
+           retry is marked so it can never loop. */
+        document.addEventListener("error", function (e) {
+          var img = e.target;
+          if (!img || img.tagName !== "IMG") return;
+          if (!img.closest || !img.closest("#work")) return;
+          if (img.getAttribute("data-retry")) return;
+          var src = img.getAttribute("src");
+          if (!src) return;
+          img.setAttribute("data-retry", "1");
+          setTimeout(function () {
+            img.src = src + (src.indexOf("?") === -1 ? "?" : "&") + "r=1";
+          }, 350);
+        }, true);
+
         function zoomHTML(label) {
           return '<span class="w-zoom"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>' + label + '</span>';
         }
@@ -1554,7 +1580,7 @@
             '<div class="w-media set-media">' +
               '<span class="set-layer set-layer-1" style="background-image:url(' + layer1.img + ')" aria-hidden="true"></span>' +
               '<span class="set-layer set-layer-2" style="background-image:url(' + layer2.img + ')" aria-hidden="true"></span>' +
-              '<img class="set-cover" src="' + cover.img + '" alt="' + cover.alt + '" loading="eager" decoding="async" fetchpriority="high" />' +
+              '<img class="set-cover" src="' + cover.img + '" alt="' + cover.alt + '" loading="eager" decoding="async" />' +
               '<span class="set-badge">Series · <b>' + n + '</b> Designs</span>' +
               zoomHTML("View series") +
             '</div>';
