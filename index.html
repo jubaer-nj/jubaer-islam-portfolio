@@ -22,7 +22,7 @@
          visitor actually sees the build start after the loader fades. */
       try {
         if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          window.__loaderDoneAt = Date.now() + 1750;
+          window.__loaderDoneAt = Date.now() + 300;
         } else { window.__loaderDoneAt = 0; }
       } catch (e) { window.__loaderDoneAt = 0; }
     </script>
@@ -665,7 +665,7 @@
         position: fixed; inset: 0; z-index: 5000; background: #07070c;
         display: grid; place-items: center; cursor: pointer;
         transition: opacity .55s ease;
-        animation: loaderAutoHide .6s ease 4.6s forwards;
+        animation: loaderAutoHide .6s ease 1.4s forwards;
       }
       #loader.gone { opacity: 0; pointer-events: none; }
       @keyframes loaderAutoHide { to { opacity: 0; visibility: hidden; pointer-events: none; } }
@@ -1356,7 +1356,7 @@
           if (p >= 100) { clearInterval(iv); dismiss(); }
         }, 40);
         loader.addEventListener("click", function () { clearInterval(iv); dismiss(); });
-        setTimeout(function () { clearInterval(iv); dismiss(); }, 4200);
+        setTimeout(function () { clearInterval(iv); dismiss(); }, 1400);
       })();
     </script>
 
@@ -2182,6 +2182,7 @@
         var heroAnimsBase = 0;
 
         function armHero() {
+          return; /* hero is never re-hidden for a replay build */
           html.classList.add("jb");
           if (word) word.classList.remove("filled", "filling");
           [scriptEl, roleEl, paraEl].forEach(function (el) { if (el) el.classList.remove("b-fade"); });
@@ -2326,8 +2327,14 @@
           if (window.scrollY < 50 && heroState === "armed") buildHero();
         }, { passive: true });
 
-        armEls(heroUnits);
-        buildHero();
+        /* Hero first-paint fix: the hero is NOT held behind the cursor
+           build any more — the build class comes straight off, so the
+           name, portrait and copy are visible as soon as the loader
+           fades (~300ms). The cursor team still builds the nav and
+           every section below the hero exactly as before. */
+        heroState = "built";
+        heroUnits.forEach(showEl);
+        html.classList.remove("jb");
       })();
     </script>
   </body>
